@@ -51,6 +51,60 @@ weather_df =
 ```
 
 
+```{r}
+
+boot_sample = function(df) {
+  
+  sample_frac(df, replace = TRUE)
+  
+}
+
+```
+
+```{r}
+boot_straps = 
+  tibble(strap_number = 1:5000) |> 
+  mutate(
+    strap_sample = map(strap_number, \(i) boot_sample(weather_df))
+  )
+
+boot_results_1 = 
+  boot_straps |> 
+  mutate(
+    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results_1 = map(models, broom::glance)
+  ) |> 
+  select(strap_number, results_1) |> 
+  unnest(results_1) |> 
+  select(strap_number, adj.r.squared)
+
+boot_results_2 = 
+  boot_straps |> 
+  mutate(
+    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results_2 = map(models, broom::tidy),
+    results_2 = map(results_2, as_tibble)
+  ) |> 
+  select(strap_number, results_2) |> 
+  unnest(results_2) |>
+  select(-std.error,-statistic, -p.value) |> 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate
+  )
+
+boot_results = 
+  left_join(boot_results_1, boot_results_2, by = "strap_number") |> 
+  janitor::clean_names() |> 
+  rename(beta0 = intercept,
+         beta1 = tmin,
+         beta2 = prcp) |> 
+  mutate(
+    logbeta01 = log(beta0*beta1, base = 10)
+  )
+```
+
+
 ## Problem 3
 
 ```{r data import 3}
