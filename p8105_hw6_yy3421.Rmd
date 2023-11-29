@@ -28,9 +28,20 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ## Problem 1
 
-```{r data import 1}
+```{r data import 1 and cleaning}
 homicide_df = 
-  read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) 
+  read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown"))  |> 
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    victim_age = as.numeric(victim_age),
+    resolution = case_when(
+      disposition == "Closed without arrest" ~ 0,
+      disposition == "Open/No arrest"        ~ 0,
+      disposition == "Closed by arrest"      ~ 1)
+  ) |> 
+  filter(victim_race %in% c("White", "Black")) |> 
+  filter(!(city_state %in% c( "Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL"))) |> 
+  select(city_state, resolution, victim_age, victim_sex, victim_race)
 ```
 
 
