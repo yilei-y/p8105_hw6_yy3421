@@ -104,6 +104,17 @@ boot_results =
   )
 ```
 
+###2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2and beta01
+```{r}
+boot_results |> 
+  summarize(
+    ci_lower_r = quantile(adj_r_squared, 0.025),
+    ci_upper_r = quantile(adj_r_squared, 0.975),
+    ci_lower_beta01 = quantile(logbeta01, 0.025),
+    ci_upper_beta01 = quantile(logbeta01, 0.975)
+  )
+```
+
 
 ## Problem 3
 
