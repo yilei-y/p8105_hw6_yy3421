@@ -100,9 +100,23 @@ boot_results =
          beta1 = tmin,
          beta2 = prcp) |> 
   mutate(
-    logbeta01 = log(beta0*beta1, base = 10)
+    logbeta01 = log(beta0*beta1, base = 10),
+    logbeta12 = log(abs(beta1*beta2), base = 10)
   )
 ```
+
+### Plot the distribution
+
+```{r}
+boot_results |> 
+  ggplot(aes(x = adj_r_squared))+
+  geom_density()
+
+boot_results |> 
+  ggplot(aes(x = logbeta12))+
+  geom_density()
+```
+
 
 ###2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2and beta01
 ```{r}
