@@ -45,6 +45,8 @@ homicide_df =
   select(city_state, resolution, victim_age, victim_sex, victim_race)
 ```
 
+In the data cleaning code below we create a `city_state` variable. Using the mutate function, `victim_age` is transformed into numerical values and `resolution` is created based on the `disposition` variable. Then, `victim_race` and `city_state` variables are each filtered based on this problem requirement. At the end, five variables above are selected for further analysis.
+
 ```{r Baltimore}
 baltimore_glm = 
   filter(homicide_df, city_state == "Baltimore, MD") |> 
@@ -60,6 +62,8 @@ baltimore_glm |>
   select(OR, OR_CI_lower, OR_CI_upper) |>
   knitr::kable(digits = 3)
 ```
+
+In the above code chunk, a logistic regression model is used for data from Baltimore, MD using `resolved` as the outcome and `victim_age`, `victim_sex`, and `victim_race` as predictors. After saving the output, estimate and confidence interval of the adjusted odds ratio is obtained after using `broom::tidy` and `mutate` for comparison between non-white victims and white victims.
 
 ```{r all cities}
 model_results = 
@@ -83,10 +87,17 @@ model_results |>
   knitr::kable(digits = 3)
 ```
 
+Next, through using`nest()`, `map()`, and `unnest()`, the model for Baltimore is fitted for each of the cities. The adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims for each cities are then obtained and stored. 
+
 ```{r problem 1 plot}
-
+model_results |> 
+  mutate(city_state = fct_reorder(city_state, OR)) |> 
+  ggplot(aes(x = city_state, y = OR)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = OR_CI_lower, ymax = OR_CI_upper)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
-
+Above, a plot is generated for the estimated ORs and CIs for each city, ordered by magnitude of the OR from smallest to largest. From this plot, as most cities have odds ratios that are smaller than 1, it could be intepreted that crimes with male victims have smaller odds of resolution compared to crimes with female victims after adjusting for victim age and race. However, there is a maximum disparity in New York. Further, a narrow confidence interval in approximately half of the cities could suggest a significant difference in resolution rates by sex after adjustment for victim age and race.
 
 
 ## Problem 2
@@ -213,18 +224,18 @@ birthweight_df =
 
 
 ### Propose a linear regression model
-```{r}
+```{r my model}
 linear_mod_1 = lm(bwt ~ blength + babysex + malform, data = birthweight_df)
 ```
 
-```{r}
+```{r my model residue plot}
 birthweight_df |> 
   modelr::add_predictions(linear_mod_1) |> 
   modelr::add_residuals(linear_mod_1) |> 
   ggplot(aes(x = malform, y = resid)) + geom_violin() 
 ```
 
-```{r}
+```{r my model pred plot}
 birthweight_df |> 
   modelr::add_predictions(linear_mod_1) |> 
   modelr::add_residuals(linear_mod_1) |> 
@@ -235,18 +246,18 @@ birthweight_df |>
 
 
 ### One using length at birth and gestational age as predictors (main effects only)
-```{r}
+```{r linear mod 2}
 linear_mod_2 = 
   lm(bwt ~ blength + gaweeks, data = birthweight_df) 
 ```
 
 ###One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-```{r}
+```{r linear mod 3}
 linear_mod_3 = 
   lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = birthweight_df) 
 ```
 
-```{r compare}
+```{r compare 3 models}
 birthweight_df |> 
   gather_predictions(linear_mod_1, linear_mod_2, linear_mod_3) |> 
   mutate(model = fct_inorder(model)) |> 
@@ -257,7 +268,7 @@ birthweight_df |>
 ```
 
 
-```{r}
+```{r cv setup}
 cv_df =
   crossv_mc(birthweight_df, 100) |> 
   mutate(
@@ -266,7 +277,7 @@ cv_df =
 ```
 
 
-```{r}
+```{r cv for three models}
 cv_df = 
   cv_df |> 
   mutate(
@@ -280,7 +291,7 @@ cv_df =
     rmse_3 = map2_dbl(mod_3, test, \(mod, df) rmse(model = mod, data = df)))
 ```
 
-```{r}
+```{r rmse plot}
 cv_df |> 
   select(starts_with("rmse")) |> 
   pivot_longer(
