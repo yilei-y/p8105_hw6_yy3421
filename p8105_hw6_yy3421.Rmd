@@ -116,6 +116,7 @@ weather_df =
   select(name, id, everything())
 ```
 
+After importing the weather data, a `boot_sample` function is first created for generate bootstrap samples.
 
 ```{r boot_sample}
 
@@ -127,17 +128,22 @@ boot_sample = function(df) {
 
 ```
 
-```{r data manipulation}
+Below, using the `boot_sample` and `map` functions, 5000 boot samples are created and stored in the `boot_straps` dataframe. Using the `map` and `lm` function, linear models using `tmax` as the outcome and `tmin`and `prcp` as predictors are stored in the `models` variable. 
+
+Next, using `map` and `broom::glance`, we can generate results of the linear model for each boot sample. After using the `unnest` function to show this result, we can specifically select the `r.squared` variable to obtain the estimates. Similarly, using `map` and `broom::tidy`, we can obtain estimates for β0, β1, and β2. 
+
+
+```{r boot strap}
 boot_straps = 
   tibble(strap_number = 1:5000) |> 
   mutate(
-    strap_sample = map(strap_number, \(i) boot_sample(weather_df))
+    strap_sample = map(strap_number, \(i) boot_sample(weather_df)),
+    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df))
   )
 
 boot_results_1 = 
   boot_straps |> 
   mutate(
-    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df)),
     results_1 = map(models, broom::glance)
   ) |> 
   select(strap_number, results_1) |> 
@@ -147,7 +153,6 @@ boot_results_1 =
 boot_results_2 = 
   boot_straps |> 
   mutate(
-    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df)),
     results_2 = map(models, broom::tidy),
     results_2 = map(results_2, as_tibble)
   ) |> 
@@ -159,6 +164,11 @@ boot_results_2 =
     values_from = estimate
   )
 
+```
+
+The two results of r.squared and β values are combined into one data frame using the left_join function. Using the mutate function, log(β0β1) andlog(β1β2) are calcualted for each boot sample.
+
+```{r result combination and calc}
 boot_results = 
   left_join(boot_results_1, boot_results_2, by = "strap_number") |> 
   janitor::clean_names() |> 
@@ -171,20 +181,32 @@ boot_results =
   )
 ```
 
-### Plot the distribution
+### Distribution of R.Squared and Log(β1*β2)
+
+The distribution for R.Squared and Log(β1*β2) are plotted below. We can observe a tail for smaller estimates for both two quantities, with a heavier tail for estimates of R.squared.
 
 ```{r plots problem 2}
 boot_results |> 
   ggplot(aes(x = r_squared))+
-  geom_density()
+  geom_density()+
+  labs(
+    x = "R Squared",
+    caption = "Distribution of Estimates of R.Squared"
+  )
 
 boot_results |> 
   ggplot(aes(x = logbeta12))+
-  geom_density()
+  geom_density()+
+  labs(
+    x = "Log(β1*β2)",
+    caption = "Distribution of Estimates of Log(β1*β2)"
+  )
 ```
 
+### 2.5% and 97.5% Quantiles Summary for R Squared and and Log(β0*β1)
 
-###2.5% and 97.5% quantiles to provide a 95% confidence interval for r̂ 2and beta01
+Using `summarize()`, we can generate 2.5% and 97.5% quantiles for R.squared and Log(β0*β1). 
+
 ```{r quantiles summary}
 boot_results |> 
   summarize(
@@ -194,6 +216,7 @@ boot_results |>
     ci_upper_beta01 = quantile(logbeta01, 0.975)
   )
 ```
+
 
 
 ## Problem 3
