@@ -45,6 +45,49 @@ homicide_df =
   select(city_state, resolution, victim_age, victim_sex, victim_race)
 ```
 
+```{r Baltimore}
+baltimore_glm = 
+  filter(homicide_df, city_state == "Baltimore, MD") |> 
+  glm(resolution ~ victim_age + victim_sex + victim_race, family = binomial(), data = _)
+
+baltimore_glm |> 
+  broom::tidy() |> 
+  mutate(
+    OR = exp(estimate), 
+    OR_CI_upper = exp(estimate + 1.96 * std.error),
+    OR_CI_lower = exp(estimate - 1.96 * std.error)) |> 
+  filter(term == "victim_sexMale") |> 
+  select(OR, OR_CI_lower, OR_CI_upper) |>
+  knitr::kable(digits = 3)
+```
+
+```{r all cities}
+model_results = 
+  homicide_df |> 
+  nest(data = -city_state) |> 
+  mutate(
+    models = map(data, \(df) glm(resolution ~ victim_age + victim_sex + victim_race, 
+                             family = binomial(), data = df)),
+    tidy_models = map(models, broom::tidy)) |> 
+  select(-models, -data) |> 
+  unnest(cols = tidy_models) |> 
+  mutate(
+    OR = exp(estimate), 
+    OR_CI_upper = exp(estimate + 1.96 * std.error),
+    OR_CI_lower = exp(estimate - 1.96 * std.error)) |> 
+  filter(term == "victim_sexMale") |> 
+  select(city_state, OR, OR_CI_lower, OR_CI_upper)
+
+model_results |>
+  slice(1:5) |> 
+  knitr::kable(digits = 3)
+```
+
+```{r problem 1 plot}
+
+```
+
+
 
 ## Problem 2
 
@@ -200,7 +243,7 @@ linear_mod_2 =
 ###One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 ```{r}
 linear_mod_3 = 
-  lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = birthweight_df) |> broom::tidy()
+  lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = birthweight_df) 
 ```
 
 ```{r compare}
