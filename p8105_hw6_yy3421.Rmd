@@ -214,7 +214,8 @@ boot_results |>
     ci_upper_r = quantile(r_squared, 0.975),
     ci_lower_beta01 = quantile(logbeta01, 0.025),
     ci_upper_beta01 = quantile(logbeta01, 0.975)
-  )
+  ) |> 
+  knitr::kable(digits = 3)
 ```
 
 Based on the quantile summary, we can observe an overall high R squared with its 2.5% quantile of 0.888 and 97.5% quantile of 0.940. This could be an indication of smaller differences between the observed data and the fitted values generated from the linear regression model. 
