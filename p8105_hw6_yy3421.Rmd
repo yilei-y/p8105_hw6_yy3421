@@ -162,34 +162,45 @@ birthweight_df =
       1 ~ "present"
     ),
     malform = as.factor(malform)
-  )
+  ) |> 
+  select(bwt, blength, bhead, gaweeks, babysex, malform)
 
             
-```
-
-```{r distribution}
-birthweight_df |> 
-  ggplot(aes(x = bhead, y = bwt)) + 
-  geom_point(alpha = .5)
 ```
 
 
 ### Propose a linear regression model
 ```{r}
-linear_mod_1 = lm(bwt ~ blength + babysex + malform, data = birthweight_df) 
+linear_mod_1 = lm(bwt ~ blength + babysex + malform, data = birthweight_df)
+```
+
+```{r}
+birthweight_df |> 
+  modelr::add_predictions(linear_mod_1) |> 
+  modelr::add_residuals(linear_mod_1) |> 
+  ggplot(aes(x = malform, y = resid)) + geom_violin() 
+```
+
+```{r}
+birthweight_df |> 
+  modelr::add_predictions(linear_mod_1) |> 
+  modelr::add_residuals(linear_mod_1) |> 
+  ggplot(aes(x = blength, y = bwt)) + 
+  geom_point(alpha = .5)+
+  geom_line(aes(y = pred), color = "red")
 ```
 
 
 ### One using length at birth and gestational age as predictors (main effects only)
 ```{r}
 linear_mod_2 = 
-  lm(bwt ~ blength + gaweeks, data = birthweight_df)
+  lm(bwt ~ blength + gaweeks, data = birthweight_df) 
 ```
 
 ###One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 ```{r}
 linear_mod_3 = 
-  lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = birthweight_df) 
+  lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = birthweight_df) |> broom::tidy()
 ```
 
 ```{r compare}
@@ -216,9 +227,9 @@ cv_df =
 cv_df = 
   cv_df |> 
   mutate(
-    mod_1 = map(train, \(df) lm(bwt ~ blength + babysex + malform, data = df)),
+    mod_1 = map(train, \(df) lm(bwt ~ blength + babysex + malform + bhead*blength*babysex, data = df)),
     mod_2 = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
-    mod_3  = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = df))
+    mod_3  = map(train, \(df) lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = df))
     ) |> 
   mutate(
     rmse_1 = map2_dbl(mod_1, test, \(mod, df) rmse(model = mod, data = df)),
