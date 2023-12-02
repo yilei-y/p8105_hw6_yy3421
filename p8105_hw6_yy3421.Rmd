@@ -220,7 +220,7 @@ boot_results |>
 
 Based on the quantile summary, we can observe an overall high R squared with its 2.5% quantile of 0.888 and 97.5% quantile of 0.940. This could be an indication of smaller differences between the observed data and the fitted values generated from the linear regression model. 
 
-Furthermore, it is 95% oissubke tgat the 2.5% quantile of 2.06 and 97.5% quantile of 2.14 of Log(β0*β1) could indicate an positive correlation between tmin and tmax.
+Furthermore, it is 95% possible that the 2.5% quantile of 2.06 and 97.5% quantile of 2.14 of Log(β0*β1) could indicate an positive correlation between tmin and tmax.
 
 ## Problem 3
 
@@ -241,18 +241,6 @@ birthweight_df =
   ) 
 ```
 
-    babysex = case_match(
-      babysex, 
-      1 ~ "male",
-      2 ~ "female"
-    ),
-    babysex = as.factor(babysex),
-    malform = case_match(
-      malform, 
-      0 ~ "absent",
-      1 ~ "present"
-    ),
-
 ### Proposed Linear Regression Model
 
 ```{r}
@@ -268,7 +256,7 @@ birthweight_df_select = birthweight_df |>
 linear_mod_1 = lm(bwt ~ bhead + blength + delwt+ bhead*blength*delwt, data = birthweight_df_select)
 ```
 
-# After generating the first linear regression model, predictions and residues for this model are generated `using add_predictions` and `add_residues`. Next, a plot of model residuals against fitted values is generated below. We can observe a slow decrease in residues as fitted value increases. 
+After generating the first linear regression model, predictions and residues for this model are generated `using add_predictions` and `add_residues`. Next, a plot of model residuals against fitted values is generated below. We can observe a slow decrease in residues as fitted value increases. 
 
 ```{r my model residue pred plot}
 birthweight_df_select |> 
@@ -290,7 +278,7 @@ Using `lm()`, a second linear model is generated uisng `bwt` as the outcome and 
 
 ```{r linear mod 3}
 linear_mod_3 = 
-  lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = birthweight_df_select) 
+  lm(bwt ~ bhead* blength + blength* babysex + blength*bhead*babysex, data = birthweight_df_select)
 ```
 
 For the third linear model is generated uisng `bwt` as the outcome and `blength`, `bhead`, `gaweeks`, and their interactions as the predictors.
@@ -298,17 +286,6 @@ For the third linear model is generated uisng `bwt` as the outcome and `blength`
 ### Comparing the 3 Models:
 
 After generating the three models, cross validation is used through `croosv_mc` to compare the three models. First, `train` and `test` variables are setted up.
-
-```{r compare 3 models}
-birthweight_df_select |> 
-  gather_predictions(linear_mod_1, linear_mod_2, linear_mod_3) |> 
-  mutate(model = fct_inorder(model)) |> 
-  ggplot(aes(x = blength, y = bwt)) + 
-  geom_point(alpha = .5) +
-  geom_line(aes(y = pred), color = "red") + 
-  facet_grid(~model)
-```
-
 
 ```{r cv setup}
 cv_df =
@@ -326,7 +303,7 @@ cv_df =
   mutate(
     mod_1 = map(train, \(df) lm(bwt ~ bhead + blength + delwt+ bhead*blength*delwt, data = df)),
     mod_2 = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
-    mod_3  = map(train, \(df) lm(bwt ~ bhead* blength + bhead* babysex+ bhead*blength*babysex, data = df))
+    mod_3  = map(train, \(df) lm(bwt ~ bhead* blength + blength* babysex + blength*bhead*babysex, data = df))
     ) |> 
   mutate(
     rmse_1 = map2_dbl(mod_1, test, \(mod, df) rmse(model = mod, data = df)),
